@@ -9,41 +9,51 @@ import org.jfree.data.xy.XYSeriesCollection;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.List;
 
 public class JFreeChartPlotter {
 
-    // Méthode pour créer un graphique de séries temporelles
-    public static JFreeChart createTimeSeriesChart(String title, String xAxisLabel, String yAxisLabel,
-                                                   double[] xData, double[] yData, String seriesName) {
+    // Créer un tableau de bord contenant plusieurs graphiques JFreeChart
+    public static JPanel createJFreeChartDashboard(List<JFreeChart> charts) {
+        JPanel panel = new JPanel();
+        panel.setLayout(new GridLayout(0, 2)); // 2 colonnes pour l'affichage
+        for (JFreeChart chart : charts) {
+            ChartPanel chartPanel = new ChartPanel(chart);
+            panel.add(chartPanel);
+        }
+        return panel;
+    }
+
+    // Créer un graphique de séries temporelles
+    public static JFreeChart createTimeSeriesChart(String title, double[] xData, double[] yData, String seriesName) {
         XYSeries series = new XYSeries(seriesName);
         for (int i = 0; i < xData.length; i++) {
             series.add(xData[i], yData[i]);
         }
-
         XYSeriesCollection dataset = new XYSeriesCollection(series);
-        return ChartFactory.createXYLineChart(title, xAxisLabel, yAxisLabel, dataset);
+        return ChartFactory.createXYLineChart(title, "Temps", "Valeurs", dataset);
     }
 
-    // Méthode pour créer un histogramme
-    public static JFreeChart createHistogram(String title, String categoryAxisLabel, String valueAxisLabel,
-                                             double[] data) {
+    // Créer un histogramme en limitant les valeurs pour éviter une surcharge
+    public static JFreeChart createHistogram(String title, double[] data, int maxEntries) {
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
-        for (double value : data) {
-            dataset.addValue(value, "Fréquence", String.valueOf(value));
+        double[] sampledData = sampleData(data, maxEntries);
+        for (double value : sampledData) {
+            dataset.addValue(value, "Valeur", String.valueOf(value));
         }
-
-        return ChartFactory.createBarChart(title, categoryAxisLabel, valueAxisLabel, dataset);
+        return ChartFactory.createBarChart(title, "Valeurs", "Fréquence", dataset);
     }
 
-    // Méthode pour afficher un graphique dans une fenêtre Swing
-    public static void displayChart(JFreeChart chart) {
-        JFrame frame = new JFrame(chart.getTitle().getText());
-        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        frame.setLayout(new BorderLayout());
-
-        ChartPanel chartPanel = new ChartPanel(chart);
-        frame.add(chartPanel, BorderLayout.CENTER);
-        frame.pack();
-        frame.setVisible(true);
+    // Méthode pour échantillonner les données
+    private static double[] sampleData(double[] data, int maxEntries) {
+        if (data.length <= maxEntries) {
+            return data; // Pas besoin d'échantillonnage
+        }
+        double[] sampledData = new double[maxEntries];
+        int step = data.length / maxEntries; // Écart entre les échantillons
+        for (int i = 0; i < maxEntries; i++) {
+            sampledData[i] = data[i * step];
+        }
+        return sampledData;
     }
 }
