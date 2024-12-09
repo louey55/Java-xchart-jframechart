@@ -3,9 +3,12 @@ package org.example.graphplot.plot;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.plot.CategoryPlot;
+import org.jfree.chart.plot.DatasetRenderingOrder;
+import org.jfree.chart.renderer.category.BarRenderer;
+import org.jfree.chart.renderer.category.LineAndShapeRenderer;
 import org.jfree.data.category.DefaultCategoryDataset;
-import org.jfree.data.xy.XYSeries;
-import org.jfree.data.xy.XYSeriesCollection;
 
 import javax.swing.*;
 import java.awt.*;
@@ -13,47 +16,81 @@ import java.util.List;
 
 public class JFreeChartPlotter {
 
-    // Créer un tableau de bord contenant plusieurs graphiques JFreeChart
-    public static JPanel createJFreeChartDashboard(List<JFreeChart> charts) {
-        JPanel panel = new JPanel();
-        panel.setLayout(new GridLayout(0, 2)); // 2 colonnes pour l'affichage
-        for (JFreeChart chart : charts) {
-            ChartPanel chartPanel = new ChartPanel(chart);
-            panel.add(chartPanel);
-        }
+    public JPanel createJFreeDashboard(List<String[]> data) {
+        JPanel panel = new JPanel(new GridLayout(3, 1));
+
+        // Bar Chart
+        JFreeChart barChart = createBarChart(data);
+        panel.add(new ChartPanel(barChart));
+
+        // Line Chart
+        JFreeChart lineChart = createLineChart(data);
+        panel.add(new ChartPanel(lineChart));
+
+        // Combined Chart
+        JFreeChart combinedChart = createCombinedChart(data);
+        panel.add(new ChartPanel(combinedChart));
+
         return panel;
     }
 
-    // Créer un graphique de séries temporelles
-    public static JFreeChart createTimeSeriesChart(String title, double[] xData, double[] yData, String seriesName) {
-        XYSeries series = new XYSeries(seriesName);
-        for (int i = 0; i < xData.length; i++) {
-            series.add(xData[i], yData[i]);
-        }
-        XYSeriesCollection dataset = new XYSeriesCollection(series);
-        return ChartFactory.createXYLineChart(title, "Temps", "Valeurs", dataset);
-    }
-
-    // Créer un histogramme en limitant les valeurs pour éviter une surcharge
-    public static JFreeChart createHistogram(String title, double[] data, int maxEntries) {
+    private JFreeChart createBarChart(List<String[]> data) {
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
-        double[] sampledData = sampleData(data, maxEntries);
-        for (double value : sampledData) {
-            dataset.addValue(value, "Valeur", String.valueOf(value));
+        for (String[] row : data) {
+            dataset.addValue(Double.parseDouble(row[1]), "Confirmed", row[0]);
         }
-        return ChartFactory.createBarChart(title, "Valeurs", "Fréquence", dataset);
+        return ChartFactory.createBarChart("Confirmed Cases", "Country", "Cases", dataset);
     }
 
-    // Méthode pour échantillonner les données
-    private static double[] sampleData(double[] data, int maxEntries) {
-        if (data.length <= maxEntries) {
-            return data; // Pas besoin d'échantillonnage
+    private JFreeChart createLineChart(List<String[]> data) {
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+        for (String[] row : data) {
+            dataset.addValue(Double.parseDouble(row[1]), "Confirmed", row[0]);
+            dataset.addValue(Double.parseDouble(row[2]), "Deaths", row[0]);
         }
-        double[] sampledData = new double[maxEntries];
-        int step = data.length / maxEntries; // Écart entre les échantillons
-        for (int i = 0; i < maxEntries; i++) {
-            sampledData[i] = data[i * step];
+        return ChartFactory.createLineChart("Confirmed vs Deaths", "Country", "Cases", dataset);
+    }
+
+    private JFreeChart createCombinedChart(List<String[]> data) {
+        // Datasets
+        DefaultCategoryDataset barDataset = new DefaultCategoryDataset();
+        DefaultCategoryDataset lineDataset = new DefaultCategoryDataset();
+
+        for (String[] row : data) {
+            barDataset.addValue(Double.parseDouble(row[1]), "Confirmed", row[0]);
+            lineDataset.addValue(Double.parseDouble(row[2]), "Deaths", row[0]);
         }
-        return sampledData;
+
+        // Bar Chart
+        JFreeChart chart = ChartFactory.createBarChart("Combined Chart", "Country", "Cases", barDataset);
+        CategoryPlot plot = chart.getCategoryPlot();
+
+        // Configure Bar Renderer
+        BarRenderer barRenderer = new BarRenderer();
+        plot.setRenderer(0, barRenderer);
+
+        // Add Line Chart to the plot
+        LineAndShapeRenderer lineRenderer = new LineAndShapeRenderer();
+        plot.setDataset(1, lineDataset);
+        plot.setRenderer(1, lineRenderer);
+        plot.mapDatasetToRangeAxis(1, 0);
+
+        // Set Rendering Order
+        plot.setDatasetRenderingOrder(DatasetRenderingOrder.FORWARD);
+
+        // Adjust Axis
+        NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
+        rangeAxis.setAutoRangeIncludesZero(true);
+        rangeAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
+
+        return chart;
+    }
+
+    public void displayDashboard(List<String[]> data) {
+        JFrame frame = new JFrame("JFreeChart Dashboard");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.add(createJFreeDashboard(data));
+        frame.pack();
+        frame.setVisible(true);
     }
 }

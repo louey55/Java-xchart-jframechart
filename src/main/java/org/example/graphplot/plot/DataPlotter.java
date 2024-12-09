@@ -4,77 +4,91 @@ import org.knowm.xchart.*;
 import org.knowm.xchart.style.Styler;
 
 import javax.swing.*;
-import java.util.ArrayList;
+import java.awt.*;
 import java.util.List;
 
 public class DataPlotter {
 
-    public static JPanel createXChartDashboard(List<XYChart> xyCharts, List<CategoryChart> histograms) {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+    public JPanel createXChartDashboard(List<String[]> data) {
+        JPanel panel = new JPanel(new GridLayout(2, 2));
 
-        for (XYChart xyChart : xyCharts) {
-            panel.add(new XChartPanel<>(xyChart));
-        }
-        for (CategoryChart histogram : histograms) {
-            panel.add(new XChartPanel<>(histogram));
-        }
+        // Pie Chart
+        PieChart pieChart = createPieChart(data);
+        panel.add(new XChartPanel<>(pieChart));
+
+        // Line Chart
+        XYChart lineChart = createLineChart(data);
+        panel.add(new XChartPanel<>(lineChart));
+
+        // Histogram
+        CategoryChart barChart = createBarChart(data);
+        panel.add(new XChartPanel<>(barChart));
 
         return panel;
     }
 
-    public static XYChart plotCombinedTimeSeries(double[] yData1, double[] yData2, String title1, String title2) {
-        XYChart chart = new XYChartBuilder().width(800).height(600)
-                .title("Comparaison de " + title1 + " et " + title2)
-                .xAxisTitle("Temps")
-                .yAxisTitle("Valeurs")
-                .build();
+    private PieChart createPieChart(List<String[]> data) {
+        PieChart chart = new PieChartBuilder().width(400).height(300).title("Recovered Cases").build();
 
-        double[] xData = new double[yData1.length];
-        for (int i = 0; i < yData1.length; i++) {
-            xData[i] = i;
+        for (String[] row : data) {
+            chart.addSeries(row[0], Integer.parseInt(row[3])); // Add country and recovered cases
         }
-
-        chart.addSeries(title1, xData, yData1);
-        chart.addSeries(title2, xData, yData2);
-
-        chart.getStyler().setLegendPosition(Styler.LegendPosition.InsideNW);
         return chart;
     }
 
-    public static CategoryChart plotHistogram(double[] yData, String title) {
-        CategoryChart chart = new CategoryChartBuilder().width(800).height(600)
-                .title(title)
-                .xAxisTitle("Intervalles")
-                .yAxisTitle("Fréquence")
+    private XYChart createLineChart(List<String[]> data) {
+        XYChart chart = new XYChartBuilder()
+                .width(400)
+                .height(300)
+                .title("Confirmed vs Deaths")
+                .xAxisTitle("Country Index")
+                .yAxisTitle("Cases")
                 .build();
 
-        // Réduire les données en regroupant par intervalles
-        List<String> intervals = new ArrayList<>();
-        List<Integer> frequencies = new ArrayList<>();
-        int intervalSize = 10; // Taille des intervalles
+        // Disable scientific notation for Y-axis
+        chart.getStyler().setYAxisDecimalPattern("###,###");
 
-        for (double value : yData) {
-            double intervalStart = Math.floor(value / intervalSize) * intervalSize;
-            double intervalEnd = intervalStart + intervalSize;
-            String intervalLabel = String.format("%.0f-%.0f", intervalStart, intervalEnd);
-            int index = intervals.indexOf(intervalLabel);
-            if (index == -1) {
-                intervals.add(intervalLabel);
-                frequencies.add(1);
-            } else {
-                frequencies.set(index, frequencies.get(index) + 1);
-            }
+        double[] xData = new double[data.size()];
+        double[] confirmed = new double[data.size()];
+        double[] deaths = new double[data.size()];
+
+        for (int i = 0; i < data.size(); i++) {
+            xData[i] = i; // Index of the country
+            confirmed[i] = Double.parseDouble(data.get(i)[1]); // Confirmed cases
+            deaths[i] = Double.parseDouble(data.get(i)[2]); // Deaths
         }
 
-        chart.addSeries("Valeurs", intervals, frequencies);
-
-        // Personnaliser le style pour améliorer la lisibilité
-        chart.getStyler().setLegendPosition(Styler.LegendPosition.InsideNW);
-        chart.getStyler().setAxisTickLabelsFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 10));
-        chart.getStyler().setXAxisLabelRotation(45); // Rotation des étiquettes pour éviter le chevauchement
-        chart.getStyler().setHasAnnotations(true);
+        chart.addSeries("Confirmed", xData, confirmed);
+        chart.addSeries("Deaths", xData, deaths);
 
         return chart;
+    }
+
+    private CategoryChart createBarChart(List<String[]> data) {
+        CategoryChart chart = new CategoryChartBuilder()
+                .width(400)
+                .height(300)
+                .title("Confirmed Cases by Country")
+                .xAxisTitle("Country")
+                .yAxisTitle("Confirmed Cases")
+                .build();
+
+        // Style adjustments
+        chart.getStyler().setYAxisDecimalPattern("###,###");
+        chart.getStyler().setLegendPosition(Styler.LegendPosition.InsideNW);
+
+        for (String[] row : data) {
+            chart.addSeries(row[0], new double[]{1}, new double[]{Double.parseDouble(row[1])}); // Add country and confirmed cases
+        }
+
+        return chart;
+    }
+
+    public void displayDashboard(List<String[]> data) {
+        JFrame frame = new JFrame("XChart Dashboard");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.add(createXChartDashboard(data));
+        frame.pack();
+        frame.setVisible(true);
     }
 }
