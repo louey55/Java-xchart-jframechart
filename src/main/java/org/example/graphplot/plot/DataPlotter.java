@@ -9,7 +9,7 @@ import java.util.List;
 
 public class DataPlotter {
 
-    public JPanel createXChartDashboard(List<String[]> data) {
+    public JPanel createXChartDashboard(List<String[]> data, double[] globalAverages) {
         JPanel panel = new JPanel(new GridLayout(2, 2));
 
         // Pie Chart
@@ -20,9 +20,14 @@ public class DataPlotter {
         XYChart lineChart = createLineChart(data);
         panel.add(new XChartPanel<>(lineChart));
 
-        // Histogram
+        // Bar Chart
         CategoryChart barChart = createBarChart(data);
         panel.add(new XChartPanel<>(barChart));
+
+        // Comparison Table
+        JTable comparisonTable = createComparisonTable(data, globalAverages);
+        JScrollPane scrollPane = new JScrollPane(comparisonTable);
+        panel.add(scrollPane);
 
         return panel;
     }
@@ -84,10 +89,34 @@ public class DataPlotter {
         return chart;
     }
 
-    public void displayDashboard(List<String[]> data) {
+    private JTable createComparisonTable(List<String[]> data, double[] globalAverages) {
+        String[] columnNames = {"Country", "Confirmed", "Recovered", "Deaths",
+                "Confirmed (Above/Below)", "Recovered (Above/Below)", "Deaths (Above/Below)"};
+        Object[][] tableData = new Object[data.size()][7];
+
+        for (int i = 0; i < data.size(); i++) {
+            String[] row = data.get(i);
+            tableData[i][0] = row[0]; // Country
+            double confirmed = Double.parseDouble(row[1]);
+            double recovered = Double.parseDouble(row[3]);
+            double deaths = Double.parseDouble(row[2]);
+
+            tableData[i][1] = confirmed;
+            tableData[i][2] = recovered;
+            tableData[i][3] = deaths;
+
+            tableData[i][4] = confirmed >= globalAverages[0] ? "Above" : "Below";
+            tableData[i][5] = recovered >= globalAverages[1] ? "Above" : "Below";
+            tableData[i][6] = deaths >= globalAverages[2] ? "Above" : "Below";
+        }
+
+        return new JTable(tableData, columnNames);
+    }
+
+    public void displayDashboard(List<String[]> data, double[] globalAverages) {
         JFrame frame = new JFrame("XChart Dashboard");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.add(createXChartDashboard(data));
+        frame.add(createXChartDashboard(data, globalAverages));
         frame.pack();
         frame.setVisible(true);
     }

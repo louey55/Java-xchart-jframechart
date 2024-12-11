@@ -1,5 +1,6 @@
-package org.example;
 
+package org.example;
+import org.example.graphplot.analysis.DataAnalysis;
 import org.example.graphplot.data.DataCleaner;
 import org.example.graphplot.data.DataHandler;
 import org.example.graphplot.plot.DataPlotter;
@@ -17,10 +18,16 @@ public class Main {
 
         DataCleaner dataCleaner = new DataCleaner();
         List<String[]> cleanedData = dataCleaner.cleanAndSelectTopCountries(rawData, 20);
+        // Calculer les moyennes globales pour les 20 premiers pays
+        double[] globalAverages = DataAnalysis.calculateGlobalAverages(cleanedData);
 
-        // Display XChart Dashboard
+        // Afficher les statistiques globales
+        DataAnalysis.printGlobalStatistics(globalAverages);
+
+        // Afficher le tableau de bord XChart avec les comparaisons
         DataPlotter dataPlotter = new DataPlotter();
-        dataPlotter.displayDashboard(cleanedData);
+        dataPlotter.displayDashboard(cleanedData, globalAverages);
+
 
         // Display JFreeChart Dashboard
         JFreeChartPlotter jFreeChartPlotter = new JFreeChartPlotter();
